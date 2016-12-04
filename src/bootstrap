@@ -1,0 +1,46 @@
+/*
+ * Debut de partie : on créé un ouvrier
+ */
+
+function main() {
+	var sp = Game.spawns[Object.keys(Game.spawns)[0]];
+	
+	var needed = {};
+	
+	needed.harvester = 2;
+	needed.upgrader = 1;
+	needed.builder = 5;
+
+	if (sp.room.energyCapacityAvailable < 400) {
+		var creep_body = [WORK, CARRY, MOVE];
+	} else if (sp.room.energyCapacityAvailable < 600) {
+		var creep_body = [WORK, WORK, CARRY, CARRY, MOVE, MOVE];
+	} else {
+		var creep_body = [WORK, WORK, WORK, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE];
+	}
+
+	var creeps = {}
+	for (var role of ["harvester", "upgrader", "builder"]) {
+		
+		creeps[role] = _.filter(Game.creeps, (creep) => creep.memory.role == role);
+		
+		var sp_error = sp.canCreateCreep(creep_body);
+		
+		if (!sp_error && needed[role] > creeps[role].length) {
+			var name = sp.createCreep(
+				creep_body,
+				undefined,
+				{
+					role: role
+				}
+			);
+			console.log(sp.name, ": spawning", role, name);
+			break;
+		}
+	}
+	
+}
+
+module.exports = {
+	main: main
+}

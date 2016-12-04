@@ -1,30 +1,88 @@
-var roleHarvester = {
 
-    /** @param {Creep} creep **/
-    run: function(creep) {
-	    if(creep.carry.energy < creep.carryCapacity) {
-            var sources = creep.room.find(FIND_SOURCES);
-            if(creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(sources[0]);
-            }
-        }
-        else {
-            var targets = creep.room.find(FIND_STRUCTURES, {
-                    filter: (structure) => {
-                        return (structure.structureType == STRUCTURE_EXTENSION ||
-                                structure.structureType == STRUCTURE_SPAWN ||
-                                structure.structureType == STRUCTURE_TOWER) && structure.energy < structure.energyCapacity;
-                    }
-            });
-            if(targets.length > 0) {
-                if(creep.transfer(targets[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(targets[0]);
-                }
-            } else {
-                var waitingZone = Game.flags["waitingZone"];
-                creep.moveTo(waitingZone);
-            }
-        }
+var roleHarvester = {
+	
+	prepare: function() {
+	},
+	
+	
+	
+	/** @param {Creep} creep **/
+	run: function(creep) {
+		// creeps have always the same source assigned
+		// once assigned they shouldn't change
+		if (creep.memory.sourceId === undefined) {
+			creep.memory.sourceId = creep.pos.findClosestByPath(FIND_SOURCES).id;
+		}
+		
+		if (creep.carry.energy >= creep.carryCapacity) {
+			creep.memory.state = "dispatching";
+			
+		} else if (creep.carry.energy == 0) {
+			creep.memory.state = "harvesting";
+		} else if (creep.carry.energy < creep.carryCapacity && creep.memory.state == "idle") {
+			creep.memory.state = "harvesting";
+		}
+		
+		if (creep.memory.state == "dispatching") {
+			if (creep.memory.destId === undefined) {
+				
+				var dest = creep.pos.findClosestByPath(FIND_STRUCTURES, {
+					filter: (structure) => {
+						return (structure.structureType == STRUCTURE_EXTENSION ||
+						structure.structureType == STRUCTURE_SPAWN ||
+						structure.structureType == STRUCTURE_TOWER) && structure.energy < structure.energyCapacity;
+					}
+				});
+				
+				if (dest !== null) {
+					creep.memory.destId = dest.id;
+				} else {
+					creep.memory.state = "idle";
+				}
+			} else {
+				var dest = Game.getObjectById(creep.memory.destId);
+			}
+		}
+		
+		if (creep.memory.state == "dispatching") {
+			if (creep.transfer(dest, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+				creep.moveTo(dest);
+			}
+
+			if (dest !== null && dest.energy >= dest.energyCapacity) {
+				// remove the current target if it is full
+				delete creep.memory.destId;
+			}
+			
+		}
+		
+		if (creep.memory.state == "harvesting") {
+			var source = Game.getObjectById(creep.memory.sourceId);
+			if (creep.harvest(source) == ERR_NOT_IN_RANGE) {
+				creep.moveTo(source);
+			}
+		}
+		
+		if (creep.memory.state == "idle") {
+			if (creep.memory.destId === undefined) {
+				var dest = creep.pos.findClosestByPath(FIND_FLAGS, {
+					filter: (flag) => {
+						return (flag.name == "harvesters");
+					}
+				});
+				if (dest !== null) {
+					creep.memory.destId = dest.id;
+					// reset the source
+					delete creep.memory.sourceId;
+				}
+			} else {
+				var dest = Game.getObjectById(creep.memory.destId);
+			}
+			
+			if (dest !== null) {
+				creep.moveTo(dest);
+			}
+		}
 	}
 };
 

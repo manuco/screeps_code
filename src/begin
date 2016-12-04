@@ -1,18 +1,15 @@
 
 function check_first() {
 	if (Memory.gstate == undefined) {
-		Memory.gstate = "stage0"
+		Memory.gstate = {
+			stage: "bootstrap",
+			step: 0
+		}
+	} else {
+		console.log("Prebootstrap already called.")
 	}
-
-
-
-
-}
-
-function main() {
-	check_first();
 }
 
 module.exports = {
-    begin: main
+	begin: check_first
 };
